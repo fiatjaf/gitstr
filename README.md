@@ -7,8 +7,8 @@ Send and receive git patches over nostr.
 Download latest binaries from the releases page. https://github.com/npub1zenn0/go-git-nostr/releases
 
 ```sh
-$ # You'll have to fix the version                                                    or show
-$ wget https://github.com/npub1zenn0/go-git-nostr/releases/download/v<version>/git-nostr-send-v<version>-linux-amd64.tar.gz
+$ # You'll have to fix the version
+$ VERSION=v0.0.0 wget "https://github.com/npub1zenn0/go-git-nostr/releases/download/$VERSION/git-nostr-{send,show}-$VERSION-linux-amd64.tar.gz"
 $ tar -xzf <file>.tar.gz
 ```
 
@@ -24,6 +24,8 @@ $ git config --global nostr.secretkey <hex_key>
 If you then have the binaries in your `$PATH`, you can then use them like so.
 
 ```sh
+$ git config nostr.hashtag my-repo-name
+$ git show-nostr -h
 $ # outputs all patches for project "nostr-git-cli".
 $ git show-nostr -t nostr-git-cli -r wss://nos.lol # override relays to just wss://nos.lol
 
@@ -34,7 +36,38 @@ $ # Apply a specific patch.
 $ git show-nostr -e "<nostr_event_id>" -t nostr-git-cli -r wss://nos.lol | git am
 ```
 
-See `git {show,send}-nostr --help` for more.
+See `git {show,send}-nostr -h` for more.
+
+```
+Usage: git-send-nostr <commit>
+
+Arguments:
+  <commit>    Commit hash
+
+Flags:
+  -h, --help               Show context-sensitive help.
+  -r, --relay=RELAY,...    Relay to broadcast to. Will use 'git config
+                           nostr.relays' by default.You can specify multiple
+                           times '-r wss://... -r wss://...'
+  -d, --dry-run            Dry run. Just print event to stdout instead of
+                           relaying.
+  -s, --sec=STRING         Secret key
+```
+
+```
+Usage: git-show-nostr
+
+Flags:
+  -h, --help               Show context-sensitive help.
+  -r, --relay=RELAY,...    Relay to broadcast to. Will use 'git config
+                           nostr.relays' by default.You can specify multiple
+                           times '-r wss://... -r wss://...'
+  -t, --hashtag=STRING     Hashtag (e.g. repo name) to search for. Will use 'git
+                           config nostr.hashtag' by default.
+  -p, --user=STRING        Show patches from particular user.
+                           nprofile/pubkey/npub.
+  -e, --event-id=STRING    Show patch from particular event.
+```
 
 ## Prior art
 
