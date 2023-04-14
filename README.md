@@ -8,7 +8,7 @@ Download latest binaries from the releases page. https://github.com/npub1zenn0/g
 
 ```sh
 $ # You'll have to fix the version
-$ VERSION=v0.0.0 wget "https://github.com/npub1zenn0/go-git-nostr/releases/download/$VERSION/git-nostr-{send,show}-$VERSION-linux-amd64.tar.gz"
+$ VERSION=v0.0.0 wget https://github.com/npub1zenn0/go-git-nostr/releases/download/$VERSION/git-{send,show}-nostr-$VERSION-linux-amd64.tar.gz
 $ tar -xzf <file>.tar.gz
 ```
 
@@ -29,11 +29,16 @@ $ git show-nostr -h
 $ # outputs all patches for project "nostr-git-cli".
 $ git show-nostr -t nostr-git-cli -r wss://nos.lol # override relays to just wss://nos.lol
 
-$ # Send a new patch in
-$ git send-nostr --dry-run HEAD -t nostr-git-cli -r wss://nos.lol -r wss://example.com
+$ git format-patch HEAD~ # This will show you what you're about to send as patch.
+
+$ # Dry run send a new patch.
+$ git send-nostr --dry-run HEAD~ -t nostr-git-cli -r wss://nos.lol -r wss://example.com
 
 $ # Apply a specific patch.
-$ git show-nostr -e "<nostr_event_id>" -t nostr-git-cli -r wss://nos.lol | git am
+$ git show-nostr -e "<nevent...>" -t nostr-git-cli -r wss://nos.lol | git am
+
+$ # From specific user
+$ git show-nostr -p "<nprofile|npub...>" -t nostr-git-cli -r wss://nos.lol | git am
 ```
 
 See `git {show,send}-nostr -h` for more.
@@ -51,7 +56,7 @@ Flags:
                            times '-r wss://... -r wss://...'
   -d, --dry-run            Dry run. Just print event to stdout instead of
                            relaying.
-  -s, --sec=STRING         Secret key
+  -s, --sec=STRING         Secret key in hex.
 ```
 
 ```
