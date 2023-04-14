@@ -12,7 +12,7 @@ $ wget https://github.com/npub1zenn0/go-git-nostr/releases/download/v<version>/g
 $ tar -xzf <file>.tar.gz
 ```
 
-Note that there are _two_ binaries: `git-send-nostr`, and `git-show-nostr`. You'll want both.
+Note that there are _two_ binaries in the release: `git-send-nostr`, and `git-show-nostr`. You'll want both, but they are [not in the same zip](https://github.com/wangyoucao577/go-release-action/pull/107).
 
 ```sh
 $ git config --global nostr.relays "wss://nos.lol wss://relay.damus.io" # can have multiple, split by space
