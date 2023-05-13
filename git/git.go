@@ -12,8 +12,10 @@ func Run(cmd ...string) (string, error) {
 	return strings.TrimSpace(string(v)), err
 }
 
-var subjectRegex = regexp.MustCompile(`(?m)^Subject: (.*)$`)
-var authorRegex = regexp.MustCompile(`(?m)^From: (.*)$`)
+var (
+	subjectRegex = regexp.MustCompile(`(?m)^Subject: (.*)$`)
+	authorRegex  = regexp.MustCompile(`(?m)^From: (.*)$`)
+)
 
 // ExtractAuthorSubject from a git patch.
 func ExtractAuthorSubject(patch string) (string, string, error) {

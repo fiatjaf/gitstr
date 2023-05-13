@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/alecthomas/kong"
-	"github.com/npub1zenn0/nostr-git-cli/src/apps/show/cmd"
+	nostrgit "github.com/fiatjaf/nostr-git-cli"
 )
 
 var CLI struct {
@@ -22,7 +22,7 @@ func main() {
 	ctx := kong.Parse(&CLI)
 	switch ctx.Command() {
 	default:
-		patches, err := cmd.Show(CLI.Relay, CLI.Hashtag, CLI.User, CLI.EventID)
+		patches, err := nostrgit.Show(CLI.Relay, CLI.Hashtag, CLI.User, CLI.EventID)
 		if err != nil {
 			log.Fatalln(err)
 		}

@@ -1,4 +1,4 @@
-package cmd
+package nostrgit
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
+	git "github.com/fiatjaf/nostr-git-cli/git"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
-	"github.com/npub1zenn0/nostr-git-cli/src/internal/git"
 	"github.com/samber/lo"
 	"github.com/samber/lo/parallel"
 )
@@ -83,7 +83,7 @@ func publish(relay string, evt nostr.Event) error {
 	if err != nil {
 		return fmt.Errorf("error connecting to relay %v: %w", relay, err)
 	}
-	status, err := conn.Publish(conn.ConnectionContext, evt)
+	status, err := conn.Publish(conn.Context(), evt)
 	if err != nil {
 		return fmt.Errorf("error publishing (relay=%v;status=%v): %w", relay, status, err)
 	}
@@ -102,7 +102,7 @@ func mkEvent(content string, author string, subject string) nostr.Event {
 		tags = append(tags, nostr.Tag{"t", hashtag})
 	}
 	return nostr.Event{
-		CreatedAt: time.Now().UTC(),
+		CreatedAt: nostr.Now(),
 		Kind:      kind,
 		Tags:      tags,
 		Content:   content,
