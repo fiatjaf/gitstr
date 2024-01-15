@@ -1,4 +1,4 @@
-package nostrgit
+package gitstr
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fiatjaf/nostr-git-cli/git"
+	"github.com/fiatjaf/gitstr/git"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
 	"github.com/samber/lo"

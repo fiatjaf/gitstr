@@ -1,15 +1,16 @@
-module github.com/fiatjaf/nostr-git-cli
+module github.com/fiatjaf/gitstr
 
-go 1.20
+go 1.21
+
+toolchain go1.21.4
 
 require (
 	github.com/alecthomas/kong v0.7.1
-	github.com/nbd-wtf/go-nostr v0.18.3
+	github.com/nbd-wtf/go-nostr v0.28.0
 	github.com/samber/lo v1.38.1
 )
 
 require (
-	github.com/SaveTheRbtz/generic-sync-map-go v0.0.0-20220414055132-a37292614db8 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.3 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2 // indirect
@@ -20,10 +21,11 @@ require (
 	github.com/gobwas/ws v1.2.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/puzpuzpuz/xsync/v3 v3.0.2 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	golang.org/x/exp v0.0.0-20221106115401-f9659909a136 // indirect
+	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
 	golang.org/x/net v0.9.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 )

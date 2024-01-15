@@ -1,4 +1,4 @@
-package nostrgit
+package gitstr
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	git "github.com/fiatjaf/nostr-git-cli/git"
+	"github.com/fiatjaf/gitstr/git"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
 	"github.com/samber/lo"
@@ -83,9 +83,8 @@ func publish(relay string, evt nostr.Event) error {
 	if err != nil {
 		return fmt.Errorf("error connecting to relay %v: %w", relay, err)
 	}
-	status, err := conn.Publish(conn.Context(), evt)
-	if err != nil {
-		return fmt.Errorf("error publishing (relay=%v;status=%v): %w", relay, status, err)
+	if err := conn.Publish(conn.Context(), evt); err != nil {
+		return fmt.Errorf("error publishing to %s: %w", relay, err)
 	}
 	return nil
 }
