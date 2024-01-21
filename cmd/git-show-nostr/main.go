@@ -1,31 +1,48 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"os"
 
-	"github.com/alecthomas/kong"
 	"github.com/fiatjaf/gitstr"
+	"github.com/nbd-wtf/go-nostr"
+	"github.com/urfave/cli/v3"
 )
 
-var CLI struct {
-	Relay []string `short:"r" help:"Relay to broadcast to. Will use 'git config nostr.relays' by default.You can specify multiple times '-r wss://... -r wss://...'"`
+var pool *nostr.SimplePool
 
-	Hashtag string `short:"t" help:"Hashtag (e.g. repo name) to search for. Will use 'git config nostr.hashtag' by default."`
-
-	User string `short:"p" help:"Show patches from particular user. nprofile/pubkey/npub."`
-
-	EventID string `short:"e" help:"Show patch from particular event."`
+var app = &cli.Command{
+	Name: "git str show",
+	Flags: []cli.Flag{
+		&cli.StringSliceFlag{
+			Name:    "relay",
+			Aliases: []string{"r"},
+			Usage:   "Relay to broadcast to. Will use 'git config nostr.relays' by default.You can specify multiple times '-r wss://... -r wss://...'",
+		},
+		&cli.StringFlag{
+			Name:    "author",
+			Aliases: []string{"p"},
+			Usage:   "Show patches from particular user. nprofile/hex/npub.",
+		},
+		&cli.StringFlag{
+			Name:    "event",
+			Aliases: []string{"e"},
+			Usage:   "Show patch from particular event. nevent/hex",
+		},
+	},
+	Before: func(ctx context.Context, c *cli.Command) error {
+		pool = nostr.NewSimplePool(ctx)
+		return nil
+	},
+	Action: func(ctx context.Context, c *cli.Command) error {
+		return gitstr.Show(ctx, pool, c.StringSlice("relay"), c.String("hashtag"), c.String("user"), c.String("event"))
+	},
 }
 
 func main() {
-	ctx := kong.Parse(&CLI)
-	switch ctx.Command() {
-	default:
-		patches, err := gitstr.Show(CLI.Relay, CLI.Hashtag, CLI.User, CLI.EventID)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		fmt.Println(patches)
+	if err := app.Run(context.Background(), os.Args); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

@@ -3,50 +3,48 @@ package gitstr
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/fiatjaf/gitstr/git"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
-	"github.com/samber/lo"
-	"github.com/samber/lo/parallel"
 )
 
-func Show(relays []string, hashtag string, user string, eventID string) (string, error) {
+func Show(ctx context.Context, pool *nostr.SimplePool, relays []string, hashtag string, user string, eventID string) error {
 	relays, err := git.GetRelays(relays)
 	if err != nil {
-		return "", fmt.Errorf("error in relays: %w", err)
+		return fmt.Errorf("error in relays: %w", err)
 	}
+
+	filter := nostr.Filter{Tags: nostr.TagMap{}}
 
 	hashtag, err = git.GetHashtag(hashtag)
 	if err != nil {
-		return "", fmt.Errorf("error in hashtag: %w", err)
+		return fmt.Errorf("error in hashtag: %w", err)
+	} else {
+		filter.Tags["t"] = []string{hashtag}
 	}
 
 	pubkey, autoRelays, err := decodeUser(user)
-	if err != nil {
-		return "", err
+	if err == nil {
+		filter.Authors = append(filter.Authors, pubkey)
 	}
 
 	evtID, evtRelays, err := decodeEventID(eventID)
-	if err != nil {
-		return "", err
+	if err == nil {
+		filter.IDs = append(filter.IDs, evtID)
 	}
 
-	// The nprofile/nevent included relays will probably always be useful enough.
+	// the nprofile/nevent included relays will probably always be useful enough
 	allRelays := append(relays, evtRelays...)
 	allRelays = append(allRelays, autoRelays...)
-	allRelays = lo.Uniq(allRelays)
 
-	evts := queryAll(allRelays, hashtag, pubkey, evtID)
+	for ie := range pool.SubManyEose(ctx, allRelays, nostr.Filters{filter}) {
+		fmt.Println(ie.Event.Content)
+	}
 
-	patches := lo.Map(evts, func(e *nostr.Event, _ int) string {
-		return e.Content
-	})
-
-	return strings.Join(patches, "\n\n"), nil
+	return nil
 }
 
 func decodeEventID(eventID string) (string, []string, error) {
@@ -61,7 +59,7 @@ func decodeEventID(eventID string) (string, []string, error) {
 		return "", nil, fmt.Errorf("received event with unexpected prefix: %v", prefix)
 	}
 	evt := nevent.(nostr.EventPointer)
-	return evt.ID, unsplit(evt.Relays), nil
+	return evt.ID, evt.Relays, nil
 }
 
 func decodeUser(user string) (string, []string, error) {
@@ -79,29 +77,9 @@ func decodeUser(user string) (string, []string, error) {
 
 	case "nprofile":
 		p := profile.(nostr.ProfilePointer)
-		return p.PublicKey, unsplit(p.Relays), nil
+		return p.PublicKey, p.Relays, nil
 	}
 	return "", nil, fmt.Errorf("received pubkey with unexpected prefix: %v", prefix)
-}
-
-func queryAll(
-	relays []string,
-	hashtag string,
-	userPubkey string,
-	eventID string,
-) []*nostr.Event {
-	evts := parallel.Map(relays, func(r string, _ int) []*nostr.Event {
-		evts, err := query(r, hashtag, userPubkey, eventID)
-		if err != nil {
-			log.Printf("failed query %v: %v\n", r, err)
-			return nil
-		}
-		return evts
-	})
-	flatEvts := lo.Flatten(evts)
-	return lo.UniqBy(flatEvts, func(e *nostr.Event) string {
-		return e.ID
-	})
 }
 
 func query(
@@ -144,10 +122,4 @@ func query(
 		return nil, fmt.Errorf("error in query: %w", err)
 	}
 	return evts, nil
-}
-
-func unsplit(arr []string) []string {
-	return lo.FlatMap(arr, func(a string, _ int) []string {
-		return strings.Split(a, ",")
-	})
 }

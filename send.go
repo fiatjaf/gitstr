@@ -9,8 +9,6 @@ import (
 	"github.com/fiatjaf/gitstr/git"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
-	"github.com/samber/lo"
-	"github.com/samber/lo/parallel"
 )
 
 // Send a git patch to nostr relays.
@@ -62,15 +60,16 @@ func Send(hash string, relays []string, sec string, dryRun bool) (string, error)
 }
 
 func publishAll(relays []string, evt nostr.Event) []string {
-	rs := parallel.Map(relays, func(r string, _ int) string {
-		err := publish(r, evt)
+	res := make([]string, 0, len(relays))
+	for _, relay := range relays {
+		err := publish(relay, evt)
 		if err != nil {
 			log.Println(fmt.Errorf("warning: %w", err))
-			return ""
+			continue
 		}
-		return r
-	})
-	return lo.Compact(rs)
+		res = append(res, relay)
+	}
+	return res
 }
 
 func publish(relay string, evt nostr.Event) error {
