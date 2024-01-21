@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/nbd-wtf/go-nostr"
 )
 
 func Run(cmd ...string) (string, error) {
@@ -17,25 +19,9 @@ var (
 	authorRegex  = regexp.MustCompile(`(?m)^From: (.*)$`)
 )
 
-// ExtractAuthorSubject from a git patch.
-func ExtractAuthorSubject(patch string) (string, string, error) {
-	subjectMatch := subjectRegex.FindStringSubmatch(patch)
-	if len(subjectMatch) == 0 {
-		return "", "", fmt.Errorf("error getting subject")
-	}
-	subject := subjectMatch[1]
-
-	authorMatch := authorRegex.FindStringSubmatch(patch)
-	if len(authorMatch) == 0 {
-		return "", "", fmt.Errorf("error getting author")
-	}
-	author := authorMatch[1]
-	return author, subject, nil
-}
-
-func GetSecKey(sec string) (string, error) {
+func GetSecretKey(sec string) (string, error) {
 	if sec == "" {
-		_sec, err := Run("config", "nostr.secretkey")
+		_sec, err := Run("config", "str.secretkey")
 		if err != nil {
 			return "", fmt.Errorf("secret key not set. Use one of\n\t-s <key>\n\tgit config --global nostr.secretkey <key>\n%w", err)
 		}
@@ -46,7 +32,7 @@ func GetSecKey(sec string) (string, error) {
 
 func GetRelays(relays []string) ([]string, error) {
 	if len(relays) == 0 {
-		_relays, err := Run("config", "nostr.relays")
+		_relays, err := Run("config", "str.relays")
 		relays = strings.Split(_relays, " ")
 		if err != nil || len(relays) == 0 {
 			return nil, fmt.Errorf("relay not set, not relaying. Use one of\n\t-r wss://relay.damus.io\n\tgit config --global nostr.relays wss://relay.damus.io\n%w", err)
@@ -55,13 +41,18 @@ func GetRelays(relays []string) ([]string, error) {
 	return relays, nil
 }
 
-func GetHashtag(hashtag string) (string, error) {
-	if hashtag == "" {
-		_hashtag, err := Run("config", "nostr.hashtag")
-		if err != nil || _hashtag == "" {
-			return "", fmt.Errorf("error getting hashtag: %w", err)
-		}
-		hashtag = _hashtag
+func GetRepositoryID() string {
+	id, err := Run("config", "str.id")
+	if err != nil {
+		return ""
 	}
-	return hashtag, nil
+	return id
+}
+
+func GetRepositoryPublicKey() string {
+	pk, _ := Run("config", "str.publickey")
+	if nostr.IsValidPublicKey(pk) {
+		return pk
+	}
+	return ""
 }

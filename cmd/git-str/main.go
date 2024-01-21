@@ -11,13 +11,17 @@ import (
 
 var pool *nostr.SimplePool
 
+const (
+	RepoAnnouncementKind = 30617
+	PatchKind            = 1617
+)
+
 var app = &cli.Command{
 	Name: "git str",
 	Flags: []cli.Flag{
 		&cli.StringSliceFlag{
 			Name:    "relay",
 			Aliases: []string{"r"},
-			Usage:   "Relay to broadcast to. Will use 'git config nostr.relays' by default.You can specify multiple times '-r wss://... -r wss://...'",
 		},
 	},
 	Before: func(ctx context.Context, c *cli.Command) error {

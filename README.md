@@ -1,8 +1,3 @@
 # gitstr
 
-Send and receive git patches over nostr.
-
----
-
-Based on http://git.jb55.com/git-nostr-tools
-and https://github.com/npub1zenn0/go-git-nostr
+Send and receive git patches over Nostr, using [NIP-34](https://github.com/nostr-protocol/nips/blob/master/34.md)

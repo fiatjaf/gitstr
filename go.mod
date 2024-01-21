@@ -5,8 +5,8 @@ go 1.21
 toolchain go1.21.4
 
 require (
-	github.com/alecthomas/kong v0.7.1
-	github.com/nbd-wtf/go-nostr v0.28.0
+	github.com/bgentry/speakeasy v0.1.0
+	github.com/nbd-wtf/go-nostr v0.28.1
 	github.com/urfave/cli/v3 v3.0.0-alpha8
 )
 
