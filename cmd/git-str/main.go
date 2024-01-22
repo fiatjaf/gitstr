@@ -14,22 +14,21 @@ var pool *nostr.SimplePool
 const (
 	RepoAnnouncementKind = 30617
 	PatchKind            = 1617
+	IssueKind            = 1621
+	ReplyKind            = 1622
 )
 
 var app = &cli.Command{
-	Name: "git str",
-	Flags: []cli.Flag{
-		&cli.StringSliceFlag{
-			Name:    "relay",
-			Aliases: []string{"r"},
-		},
-	},
+	Name:                   "git str",
+	Suggest:                true,
+	UseShortOptionHandling: true,
 	Before: func(ctx context.Context, c *cli.Command) error {
 		pool = nostr.NewSimplePool(ctx)
 		return nil
 	},
 	Commands: []*cli.Command{
-		show,
+		initRepo,
+		download,
 		send,
 	},
 }

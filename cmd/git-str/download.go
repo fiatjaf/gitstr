@@ -1,0 +1,104 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"slices"
+
+	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip19"
+	"github.com/urfave/cli/v3"
+)
+
+var download = &cli.Command{
+	Name:        "download",
+	Usage:       "",
+	Description: "",
+	Flags: []cli.Flag{
+		&cli.StringSliceFlag{
+			Name:    "relay",
+			Aliases: []string{"r"},
+		},
+		&cli.IntFlag{
+			Name:    "limit",
+			Aliases: []string{"l"},
+			Value:   15,
+		},
+	},
+	Action: func(ctx context.Context, c *cli.Command) error {
+		id := getRepositoryID()
+		if id == "" {
+			return fmt.Errorf("no repository id found in `config str.id`")
+		}
+
+		pk := getRepositoryPublicKey()
+		if pk == "" {
+			return fmt.Errorf("no repository pubkey found in `git config str.publickey`")
+		}
+
+		limit := c.Int("limit")
+		relays := append(getPatchRelays(), c.StringSlice("relay")...)
+
+		// patches we will try to browse -- if given an author we try to get all their patches targeting this repo,
+		// if given an event pointer we will try to fetch that patch specifically and so on, if given nothing we will
+		// list the latest patches available to this repository
+		items := c.Args().Slice()
+		if len(items) == 0 {
+			items = []string{""}
+		}
+
+		for _, arg := range items {
+			filter := nostr.Filter{
+				Limit: int(limit),
+				Kinds: []int{PatchKind},
+				Tags: nostr.TagMap{
+					"a": []string{fmt.Sprintf("%d:%s:%s", RepoAnnouncementKind, pk, id)},
+				},
+			}
+
+			relays := slices.Clone(relays)
+
+			if arg != "" {
+				prefix, data, err := nip19.Decode(arg)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "invalid argument '%s': %s\n", arg, err)
+					continue
+				}
+
+				switch prefix {
+				case "npub":
+					filter.Authors = append(filter.Authors, data.(string))
+				case "nprofile":
+					pp := data.(nostr.ProfilePointer)
+					filter.Authors = append(filter.Authors, pp.PublicKey)
+					relays = append(relays, pp.Relays...)
+				case "nevent":
+					ep := data.(nostr.EventPointer)
+					if ep.Kind != 0 && ep.Kind != PatchKind {
+						fmt.Fprintf(os.Stderr, "invalid argument %s: expected an encoded kind %d or nothing\n", arg, PatchKind)
+						continue
+					}
+					filter.IDs = append(filter.IDs, ep.ID)
+					relays = append(relays, ep.Relays...)
+				case "naddr":
+					ep := data.(nostr.EntityPointer)
+					if ep.Kind != RepoAnnouncementKind {
+						fmt.Fprintf(os.Stderr, "invalid argument %s: expected an encoded kind %d\n", arg, RepoAnnouncementKind)
+						continue
+					}
+
+					filter.Tags["a"] = []string{fmt.Sprintf("%d:%s:%s", RepoAnnouncementKind, ep.PublicKey, ep.Identifier)}
+					filter.Authors = append(filter.Authors, ep.PublicKey)
+					relays = append(relays, ep.Relays...)
+				}
+			}
+
+			for ie := range pool.SubManyEose(ctx, relays, nostr.Filters{filter}) {
+				fmt.Println(ie.Event)
+			}
+		}
+
+		return nil
+	},
+}
