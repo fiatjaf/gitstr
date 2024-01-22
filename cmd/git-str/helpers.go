@@ -92,13 +92,6 @@ func git(cmd ...string) (string, error) {
 	return strings.TrimSpace(string(v)), err
 }
 
-func gitWithStdin(stdin string, cmd ...string) (string, error) {
-	command := exec.Command("git", cmd...)
-	command.Stdin = strings.NewReader(stdin)
-	v, err := command.Output()
-	return strings.TrimSpace(string(v)), err
-}
-
 func sprintRepository(repo *nostr.Event) string {
 	res := ""
 	npub, _ := nip19.EncodePublicKey(repo.PubKey)

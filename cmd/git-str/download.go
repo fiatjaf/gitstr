@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
+	"time"
 
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
@@ -94,8 +97,29 @@ var download = &cli.Command{
 				}
 			}
 
+			gitRoot, err := git("rev-parse", "--show-toplevel")
+			base := filepath.Join(gitRoot, ".git/str")
+			if err != nil {
+				return fmt.Errorf("failed to find git root: %w", err)
+			} else if err := os.Mkdir(base, 0755); err != nil {
+				return fmt.Errorf("failed to create .git/str directory")
+			}
 			for ie := range pool.SubManyEose(ctx, relays, nostr.Filters{filter}) {
-				fmt.Println(ie.Event)
+				nevent, _ := nip19.EncodeEvent(ie.ID, nil, "")
+				npub, _ := nip19.EncodePublicKey(ie.PubKey)
+				subjectMatch := subjectRegex.FindStringSubmatch(ie.Event.Content)
+				if len(subjectMatch) == 0 {
+					continue
+				}
+				subject := subjectMatch[1]
+				subject = strings.ReplaceAll(strings.ReplaceAll(subject, "/", "_"), "'", "")
+				fileName := base + "/" + fmt.Sprintf("%s [%s] %s",
+					ie.CreatedAt.Time().Format(time.DateOnly), nevent[65:], subject)
+				if _, err := os.Stat(fileName); os.IsNotExist(err) {
+					fmt.Fprintf(os.Stderr, "- downloaded patch %s from %s, saved as '%s'\n",
+						ie.Event.ID, npub, fileName)
+					os.WriteFile(fileName, []byte(ie.Event.Content), 0644)
+				}
 			}
 		}
 
