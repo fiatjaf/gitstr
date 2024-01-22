@@ -18,6 +18,7 @@ const (
 
 var App = &cli.Command{
 	Name:                   "git str",
+	Description:            "NIP-34 git nostr helper",
 	Suggest:                true,
 	UseShortOptionHandling: true,
 	Before: func(ctx context.Context, c *cli.Command) error {
