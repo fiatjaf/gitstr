@@ -197,7 +197,7 @@ func getAndApplyTargetThread(
 	evt *nostr.Event,
 ) (patchRelays []string, err error) {
 	target := c.String("in-reply-to")
-	if target == "" {
+	if target == "" && !c.IsSet("in-reply-to") {
 		var err error
 		target, err = ask("reference a thread? (nevent or hex) (leave blank if not): ", "", func(answer string) bool {
 			if answer == "" {
