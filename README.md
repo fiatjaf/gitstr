@@ -2,6 +2,10 @@
 
 Send and receive git patches over Nostr, using [NIP-34](https://github.com/nostr-protocol/nips/pull/997).
 
+## How to install
+
+Do `go install github.com/fiatjaf/gitstr@latest` if you have Go or [download a binary](https://github.com/fiatjaf/gitstr/releases).
+
 ## How to receive patches
 
 If you want to receive patches in our repo, call `git str init -r <relay> [-r <relay>...]`, this will ask you a bunch of questions (you can also answer them using flags and not be asked, see `git str init --help`) and then it will announce your repository to the relays specified with `-r`.
