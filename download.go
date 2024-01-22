@@ -98,10 +98,10 @@ var download = &cli.Command{
 			}
 
 			gitRoot, err := git("rev-parse", "--show-toplevel")
-			base := filepath.Join(gitRoot, ".git/str")
+			base := filepath.Join(gitRoot, ".git/str/patches")
 			if err != nil {
 				return fmt.Errorf("failed to find git root: %w", err)
-			} else if err := os.Mkdir(base, 0755); err != nil {
+			} else if err := os.MkdirAll(base, 0755); err != nil {
 				return fmt.Errorf("failed to create .git/str directory")
 			}
 			for ie := range pool.SubManyEose(ctx, relays, nostr.Filters{filter}) {
