@@ -81,7 +81,7 @@ var initRepo = &cli.Command{
 			optional bool
 		}{
 			{"id", "d", "specify the repository unique id (for this keypair)", defaultId, false},
-			{"patches-relay", "patches", "specify a relay URL to watch for patches", "wss://nostr.fmt.wiz.biz", false},
+			{"patches-relay", "patches", "specify a relay URL to watch for patches", "wss://relay.nostr.bg wss://nostr21.com wss://nostr.fmt.wiz.biz", false},
 			{"clone-url", "clone", "specify the repository URL for git clone", defaultClone, false},
 			{"name", "name", "specify the repository name", defaultName, true},
 			{"description", "description", "specify the repository description", "", true},
