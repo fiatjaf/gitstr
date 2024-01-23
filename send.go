@@ -182,11 +182,14 @@ func getAndApplyTargetRepository(
 		patchRelays = append(patchRelays, tag[1])
 	}
 
-	evt.Tags = append(evt.Tags, nostr.Tag{
-		"a",
-		fmt.Sprintf("%d:%s:%s", ep.Kind, ep.PublicKey, ep.Identifier),
-		repo.Relay.URL,
-	})
+	evt.Tags = append(evt.Tags,
+		nostr.Tag{
+			"a",
+			fmt.Sprintf("%d:%s:%s", ep.Kind, ep.PublicKey, ep.Identifier),
+			repo.Relay.URL,
+		},
+		nostr.Tag{"p", ep.PublicKey},
+	)
 
 	return patchRelays, nil
 }
