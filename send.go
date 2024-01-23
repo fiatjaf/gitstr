@@ -80,9 +80,16 @@ var send = &cli.Command{
 		}
 
 		// gather the secret key
-		sec, err := gatherSecretKey(c)
+		sec, isEncrypted, err := gatherSecretKey(c)
 		if err != nil {
 			return err
+		}
+
+		if isEncrypted {
+			sec, err = promptDecrypt(sec)
+			if err != nil {
+				return err
+			}
 		}
 
 		err = evt.Sign(sec)

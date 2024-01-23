@@ -7,7 +7,7 @@ toolchain go1.21.4
 require (
 	github.com/chzyer/readline v1.5.1
 	github.com/fatih/color v1.16.0
-	github.com/nbd-wtf/go-nostr v0.28.1
+	github.com/nbd-wtf/go-nostr v0.28.2
 	github.com/urfave/cli/v3 v3.0.0-alpha8
 )
 
@@ -29,6 +29,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect

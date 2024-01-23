@@ -118,10 +118,16 @@ var initRepo = &cli.Command{
 			}
 		}
 
-		var err error
-		sec, err := gatherSecretKey(c)
+		sec, isEncrypted, err := gatherSecretKey(c)
 		if err != nil {
 			return fmt.Errorf("failed to get secret key: %w", err)
+		}
+
+		if isEncrypted {
+			sec, err = promptDecrypt(sec)
+			if err != nil {
+				return err
+			}
 		}
 
 		if err := evt.Sign(sec); err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
+	"github.com/nbd-wtf/go-nostr/nip49"
 	"github.com/urfave/cli/v3"
 )
 
@@ -22,7 +23,7 @@ func isPiped() bool {
 	return stat.Mode()&os.ModeCharDevice == 0
 }
 
-func gatherSecretKey(c *cli.Command) (string, error) {
+func gatherSecretKey(c *cli.Command) (key string, encrypted bool, err error) {
 	sec := c.String("sec")
 
 	if sec == "" && !c.IsSet("sec") {
@@ -31,34 +32,40 @@ func gatherSecretKey(c *cli.Command) (string, error) {
 
 	askToStore := false
 	if sec == "" {
-		askToStore = true
-		sec, _ = ask("input secret key: ", "", func(answer string) bool {
-			if !nostr.IsValid32ByteHex(answer) {
-				prefix, _, err := nip19.Decode(answer)
-				if err != nil {
-					return true
-				}
-				if prefix != "nsec" {
-					return true
-				}
+		sec, _ = ask("input secret key (hex, nsec or ncryptsec): ", "", func(answer string) bool {
+			switch {
+			case nostr.IsValid32ByteHex(answer):
+				askToStore = true
+				return false
+			case strings.HasPrefix(answer, "nsec1"):
+				askToStore = true
+				return false
+			case strings.HasPrefix(answer, "ncryptsec1"):
+				// will always store encrypted keys
+				return false
+			default:
+				return true
 			}
-			return false
 		})
 		if sec == "" {
-			return "", fmt.Errorf("couldn't gather secret key")
+			return "", false, fmt.Errorf("couldn't gather secret key")
 		}
 	}
 
-	if strings.HasPrefix(sec, "nsec1") {
-		_, hex, err := nip19.Decode(sec)
-		if err != nil {
-			return "", fmt.Errorf("invalid nsec: %w", err)
+	if strings.HasPrefix(sec, "ncryptsec1") {
+		git("config", "--local", "str.secretkey", sec)
+		return sec, true, nil
+	} else {
+		if strings.HasPrefix(sec, "nsec1") {
+			_, hex, err := nip19.Decode(sec)
+			if err != nil {
+				return "", false, fmt.Errorf("invalid nsec: %w", err)
+			}
+			sec = hex.(string)
 		}
-		sec = hex.(string)
-	}
-
-	if ok := nostr.IsValid32ByteHex(sec); !ok {
-		return "", fmt.Errorf("invalid secret key")
+		if ok := nostr.IsValid32ByteHex(sec); !ok {
+			return "", false, fmt.Errorf("invalid secret key")
+		}
 	}
 
 	if (askToStore && confirm("store the secret key on git config? ")) ||
@@ -66,7 +73,7 @@ func gatherSecretKey(c *cli.Command) (string, error) {
 		git("config", "--local", "str.secretkey", sec)
 	}
 
-	return sec, nil
+	return sec, false, nil
 }
 
 func getPatchRelays() []string {
@@ -155,6 +162,25 @@ func confirm(msg string) bool {
 		}
 	})
 	return res
+}
+
+func promptDecrypt(ncryptsec1 string) (string, error) {
+	for i := 1; i < 4; i++ {
+		var attemptStr string
+		if i > 1 {
+			attemptStr = fmt.Sprintf(" [%d/3]", i)
+		}
+		password, err := ask("type the password to decrypt your secret key"+attemptStr+": ", "", nil)
+		if err != nil {
+			return "", err
+		}
+		sec, err := nip49.Decrypt(ncryptsec1, password)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to decrypt: %w", err)
+		}
+		return sec, nil
+	}
+	return "", fmt.Errorf("couldn't decrypt private key")
 }
 
 func ask(msg string, defaultValue string, shouldAskAgain func(answer string) bool) (string, error) {
