@@ -176,7 +176,7 @@ func promptDecrypt(ncryptsec1 string) (string, error) {
 		}
 		sec, err := nip49.Decrypt(ncryptsec1, password)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to decrypt: %w", err)
+			fmt.Fprintf(os.Stderr, "failed to decrypt: %s", err)
 		}
 		return sec, nil
 	}
