@@ -4,7 +4,7 @@ Send and receive git patches over Nostr, using [NIP-34](https://github.com/nostr
 
 ## How to install
 
-Do `go install github.com/fiatjaf/gitstr@latest` if you have Go or [download a binary](https://github.com/fiatjaf/gitstr/releases).
+Do `go install github.com/fiatjaf/gitstr/cmd/git-str@latest` if you have Go or [download a binary](https://github.com/fiatjaf/gitstr/releases).
 
 ## How to receive patches
 
