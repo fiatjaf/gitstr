@@ -19,3 +19,7 @@ After that you can call `git am <patch-file>` to apply the patch.
 First you need to know the `naddr1...` code that corresponds to the target upstream repository you're sending the patch to. Until someone makes an explorer of git repositories or something like that, you'll have to get that manually from the repository owner.
 
 Then you just call `git send <commit>` (you can use `HEAD^` for the last commit and other git tricks here). You'll be asked some questions (which you can also answer with flags, see `git str send --help`) and the patch will be sent.
+
+## Contributing to this repository
+
+Send your patches to `naddr1qqrxw6t5wd68yqg5waehxw309aex2mrp0yhxgctdw4eju6t0qyt8wumn8ghj7un9d3shjtnwdaehgu3wvfskueqpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgq3q80cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsxpqqqpmejeaalw2`.
