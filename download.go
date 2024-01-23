@@ -119,7 +119,10 @@ var download = &cli.Command{
 				if _, err := os.Stat(fileName); os.IsNotExist(err) {
 					fmt.Fprintf(os.Stderr, "- downloaded patch %s from %s, saved as '%s'\n",
 						ie.Event.ID, npub, color.New(color.Underline).Sprint(fileName))
-					os.WriteFile(fileName, []byte(ie.Event.Content), 0644)
+					if err := os.WriteFile(fileName, []byte(ie.Event.Content), 0644); err != nil {
+						return fmt.Errorf("failed to write '%s': %w", fileName, err)
+					}
+					os.Chtimes(fileName, time.Time{}, ie.Event.CreatedAt.Time())
 				}
 			}
 		}
