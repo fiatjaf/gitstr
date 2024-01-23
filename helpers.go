@@ -32,7 +32,16 @@ func gatherSecretKey(c *cli.Command) (string, error) {
 	if sec == "" {
 		askToStore = true
 		sec, _ = ask("input secret key: ", "", func(answer string) bool {
-			return !nostr.IsValid32ByteHex(answer)
+			if !nostr.IsValid32ByteHex(answer) {
+				prefix, _, err := nip19.Decode(answer)
+				if err != nil {
+					return true
+				}
+				if prefix != "nsec" {
+					return true
+				}
+			}
+			return false
 		})
 		if sec == "" {
 			return "", fmt.Errorf("couldn't gather secret key")
