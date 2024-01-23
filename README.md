@@ -12,7 +12,7 @@ If you want to receive patches in our repo, call `git str init -r <relay> [-r <r
 
 After someone has sent you a patch you'll be able to call `git str download` and fetch all patches. They will be stored in the `.git/str/patches/` directory. You can also pass arguments to `git str download`, like an `nevent1...` code or a `npub1...` code, to download only patches narrowed by these arguments.
 
-After that you can call `git am <patch-file>` to apply the patch.
+After that you can call `git am -i <patch-file>` to apply the patch.
 
 ## How to send patches
 
