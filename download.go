@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
 	"github.com/urfave/cli/v3"
@@ -117,7 +118,7 @@ var download = &cli.Command{
 					ie.CreatedAt.Time().Format(time.DateOnly), nevent[65:], subject)
 				if _, err := os.Stat(fileName); os.IsNotExist(err) {
 					fmt.Fprintf(os.Stderr, "- downloaded patch %s from %s, saved as '%s'\n",
-						ie.Event.ID, npub, fileName)
+						ie.Event.ID, npub, color.New(color.Underline).Sprint(fileName))
 					os.WriteFile(fileName, []byte(ie.Event.Content), 0644)
 				}
 			}

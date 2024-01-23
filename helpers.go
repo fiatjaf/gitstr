@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/fatih/color"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
 	"github.com/urfave/cli/v3"
@@ -158,7 +159,7 @@ func confirm(msg string) bool {
 
 func ask(msg string, defaultValue string, shouldAskAgain func(answer string) bool) (string, error) {
 	rl, err := readline.NewEx(&readline.Config{
-		Prompt:                 msg,
+		Prompt:                 color.YellowString(msg),
 		InterruptPrompt:        "^C",
 		DisableAutoSaveHistory: true,
 	})
