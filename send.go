@@ -13,7 +13,7 @@ import (
 
 var send = &cli.Command{
 	Name:        "send",
-	UsageText:   "git str send <commit>",
+	UsageText:   "git str send <commit or patch-file>",
 	Description: "",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -45,15 +45,21 @@ var send = &cli.Command{
 		},
 	},
 	Action: func(ctx context.Context, c *cli.Command) error {
-		// commit
+		// commit or file
 		commit := c.Args().First()
 		if commit == "" {
-			return fmt.Errorf("no commit specified")
+			return fmt.Errorf("no commit or file specified")
 		}
-
-		patch, err := git("format-patch", "--stdout", commit)
-		if err != nil {
-			return fmt.Errorf("error getting patch: %w", err)
+		var patch string
+		if contents, err := os.ReadFile(commit); os.IsNotExist(err) {
+			patch, err = git("format-patch", "--stdout", commit)
+			if err != nil {
+				return fmt.Errorf("error getting patch: %w", err)
+			}
+		} else if err == nil {
+			patch = string(contents)
+		} else {
+			return fmt.Errorf("error reading file '%s': %w", commit, err)
 		}
 		if patch == "" {
 			return fmt.Errorf("the patch for '%s' is empty", commit)
