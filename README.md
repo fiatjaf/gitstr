@@ -20,6 +20,10 @@ First you need to know the `naddr1...` code that corresponds to the target upstr
 
 Then call `git send <commit>` (you can use `HEAD^` for the last commit and other git tricks here). You'll be asked some questions (which you can also answer with flags, see `git str send --help`) and the patch will be sent. You can also give a path to a patch file generated with `git format-patch` too instead.
 
+### Sending patches to repositories that haven't announced themselves
+
+You can pass `--dangling` to `git str send` and that will happen. Later anyone can download that patch by specifying its `nevent1` code on `git str download <nevent1...>`.
+
 ## Contributing to this repository
 
 Send your patches to `naddr1qqrxw6t5wd68yqg5waehxw309aex2mrp0yhxgctdw4eju6t0qyt8wumn8ghj7un9d3shjtnwdaehgu3wvfskueqpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgq3q80cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsxpqqqpmejeaalw2`.

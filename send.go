@@ -29,14 +29,23 @@ var send = &cli.Command{
 			Aliases: []string{"a"},
 			Usage:   "repository reference, as an naddr1... code",
 		},
+		&cli.BoolFlag{
+			Name:  "dangling",
+			Usage: "specify this to submit patches without having a target repository -- anyone can fetch those later and apply wherever they want",
+		},
 		&cli.StringFlag{
 			Name:    "in-reply-to",
 			Aliases: []string{"e"},
 			Usage:   "reply to another git event, as an nevent1... or hex code",
 		},
+		&cli.BoolFlag{
+			Name:  "not-reply",
+			Usage: "specify this to not be prompted about this patch being a reply to some other event (negates --in-reply-to)",
+		},
 		&cli.StringSliceFlag{
 			Name:    "relay",
 			Aliases: []string{"r"},
+			Usage:   "extra relays to search for the target repository in and to publish the patch to",
 		},
 		&cli.BoolFlag{
 			Name:    "yes",
@@ -139,6 +148,11 @@ func getAndApplyTargetRepository(
 	evt *nostr.Event,
 	extraRelays []string,
 ) (patchRelays []string, err error) {
+	if c.Bool("dangling") {
+		fmt.Fprintf(os.Stderr, "this patch won't target any specific repository")
+		return nil, nil
+	}
+
 	target := c.String("repository")
 	var stored string
 	if target == "" {
@@ -213,7 +227,7 @@ func getAndApplyTargetThread(
 	evt *nostr.Event,
 ) (patchRelays []string, err error) {
 	target := c.String("in-reply-to")
-	if target == "" && !c.IsSet("in-reply-to") {
+	if target == "" && !c.Bool("not-reply") {
 		var err error
 		target, err = ask("reference a thread? (nevent or hex) (leave blank if not): ", "", func(answer string) bool {
 			if answer == "" {
