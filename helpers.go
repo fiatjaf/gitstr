@@ -206,3 +206,53 @@ func ask(msg string, defaultValue string, shouldAskAgain func(answer string) boo
 		return answer, err
 	}
 }
+
+func concatSlices[V any](slices ...[]V) []V {
+	size := 0
+	for _, ss := range slices {
+		size += len(ss)
+	}
+	newSlice := make([]V, size)
+	pos := 0
+	for _, ss := range slices {
+		copy(newSlice[pos:], ss)
+		pos += len(ss)
+	}
+	return newSlice
+}
+
+func edit(initial string) (string, error) {
+	editor := "vim"
+	if s := os.Getenv("EDITOR"); s != "" {
+		editor = s
+	}
+	// tmpfile
+	f, err := os.CreateTemp("", "go-editor")
+	if err != nil {
+		return "", fmt.Errorf("creating tmpfile: %w", err)
+	}
+	defer os.Remove(f.Name())
+
+	// write initial string to it
+	if err := os.WriteFile(f.Name(), []byte(initial), 0644); err != nil {
+		return "", fmt.Errorf("error writing to tmpfile '%s': %w", f.Name(), err)
+	}
+
+	// open editor
+	cmd := exec.Command("sh", "-c", editor+" "+f.Name())
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("executing '%s %s': %w", editor, f.Name(), err)
+	}
+
+	// read tmpfile
+	b, err := os.ReadFile(f.Name())
+	if err != nil {
+		return "", fmt.Errorf("reading tmpfile '%s': %w", f.Name(), err)
+	}
+
+	return string(b), nil
+}

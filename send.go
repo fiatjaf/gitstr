@@ -26,8 +26,16 @@ var send = &cli.Command{
 		},
 		&cli.StringFlag{
 			Name:    "repository",
-			Aliases: []string{"a"},
+			Aliases: []string{"a", "to"},
 			Usage:   "repository reference, as an naddr1... code",
+		},
+		&cli.StringSliceFlag{
+			Name:  "cc",
+			Usage: "npub, hex or nprofile to mention in the event",
+		},
+		&cli.BoolFlag{
+			Name:  "annotate",
+			Usage: "specify this to submit patches without having a target repository -- anyone can fetch those later and apply wherever they want",
 		},
 		&cli.BoolFlag{
 			Name:  "dangling",
@@ -37,10 +45,6 @@ var send = &cli.Command{
 			Name:    "in-reply-to",
 			Aliases: []string{"e"},
 			Usage:   "reply to another git event, as an nevent1... or hex code",
-		},
-		&cli.BoolFlag{
-			Name:  "not-reply",
-			Usage: "specify this to not be prompted about this patch being a reply to some other event (negates --in-reply-to)",
 		},
 		&cli.StringSliceFlag{
 			Name:    "relay",
@@ -74,6 +78,14 @@ var send = &cli.Command{
 			return fmt.Errorf("the patch for '%s' is empty", commit)
 		}
 
+		if c.Bool("annotate") {
+			var err error
+			patch, err = edit(patch)
+			if err != nil {
+				return fmt.Errorf("error annotating patch: %w", err)
+			}
+		}
+
 		evt := nostr.Event{
 			CreatedAt: nostr.Now(),
 			Kind:      PatchKind,
@@ -90,6 +102,11 @@ var send = &cli.Command{
 		}
 
 		threadRelays, err := getAndApplyTargetThread(ctx, c, &evt)
+		if err != nil {
+			return err
+		}
+
+		mentionRelays, err := getAndApplyTargetMentions(ctx, c, &evt)
 		if err != nil {
 			return err
 		}
@@ -112,7 +129,7 @@ var send = &cli.Command{
 			return fmt.Errorf("error signing message: %w", err)
 		}
 
-		targetRelays := append(append(patchRelays, threadRelays...), c.StringSlice("relay")...)
+		targetRelays := concatSlices(patchRelays, threadRelays, mentionRelays, c.StringSlice("relay"))
 		goodRelays := make([]string, 0, len(targetRelays))
 
 		fmt.Fprintf(os.Stderr, "\nwill publish event\n%s", sprintPatch(evt))
@@ -225,27 +242,8 @@ func getAndApplyTargetThread(
 	ctx context.Context,
 	c *cli.Command,
 	evt *nostr.Event,
-) (patchRelays []string, err error) {
+) (mentionRelays []string, err error) {
 	target := c.String("in-reply-to")
-	if target == "" && !c.Bool("not-reply") {
-		var err error
-		target, err = ask("reference a thread? (nevent or hex) (leave blank if not): ", "", func(answer string) bool {
-			if answer == "" {
-				return false
-			}
-			prefix, _, _ := nip19.Decode(answer)
-			if prefix != "nevent" {
-				if !nostr.IsValid32ByteHex(answer) {
-					return true
-				}
-			}
-			return false
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	if target != "" {
 		_, data, _ := nip19.Decode(target)
 		ep, ok := data.(nostr.EventPointer)
@@ -261,6 +259,37 @@ func getAndApplyTargetThread(
 			return nil, fmt.Errorf("invalid target thread id")
 		}
 		evt.Tags = append(evt.Tags, nostr.Tag{"e", target})
+	}
+
+	// TODO: fetch user relays, fetch thread root, return related relays so we can submit the patch to those too
+	return nil, nil
+}
+
+func getAndApplyTargetMentions(
+	ctx context.Context,
+	c *cli.Command,
+	evt *nostr.Event,
+) (mentionRelays []string, err error) {
+	for _, target := range c.StringSlice("cc") {
+		prefix, data, err := nip19.Decode(target)
+		if err == nil {
+			switch v := data.(type) {
+			case string:
+				if prefix == "npub" {
+					target = v
+				}
+			case nostr.ProfilePointer:
+				target = v.PublicKey
+				mentionRelays = append(mentionRelays, v.Relays...)
+			}
+		}
+		target = strings.TrimSpace(target)
+
+		if nostr.IsValid32ByteHex(target) {
+			evt.Tags = append(evt.Tags, nostr.Tag{"p", target})
+		} else {
+			return nil, fmt.Errorf("invalid mention '%s'", target)
+		}
 	}
 
 	// TODO: fetch user relays, fetch thread root, return related relays so we can submit the patch to those too
