@@ -79,13 +79,14 @@ var initRepo = &cli.Command{
 			prompt   string
 			deflt    string
 			optional bool
+			multi    bool
 		}{
-			{"id", "d", "specify the repository unique id (for this keypair)", defaultId, false},
-			{"patches-relay", "patches", "specify a relay URL to watch for patches", "wss://relay.nostr.bg wss://nostr21.com wss://nostr.fmt.wiz.biz", false},
-			{"clone-url", "clone", "specify the repository URL for git clone", defaultClone, false},
-			{"name", "name", "specify the repository name", defaultName, true},
-			{"description", "description", "specify the repository description", "", true},
-			{"web-url", "web", "specify the repository URL for browsing on the web", defaultWeb, true},
+			{"id", "d", "specify the repository unique id (for this keypair)", defaultId, false, false},
+			{"patches-relay", "patches", "specify a relay URL to watch for patches", "wss://relay.nostr.bg wss://nostr21.com wss://nostr.fmt.wiz.biz", false, true},
+			{"clone-url", "clone", "specify the repository URL for git clone", defaultClone, false, true},
+			{"name", "name", "specify the repository name", defaultName, true, false},
+			{"description", "description", "specify the repository description", "", true, false},
+			{"web-url", "web", "specify the repository URL for browsing on the web", defaultWeb, true, true},
 		} {
 			v := c.String(prop.name)
 			if v == "" {
@@ -98,6 +99,10 @@ var initRepo = &cli.Command{
 				if prop.optional {
 					prompt += " (optional)"
 				}
+				if prop.multi {
+					prompt += "*"
+				}
+
 				var err error
 				v, err = ask(prompt+": ", v, func(answer string) bool {
 					if prop.optional {
@@ -112,7 +117,14 @@ var initRepo = &cli.Command{
 
 			if v != "" {
 				git("config", "--local", "str."+prop.name, v)
-				evt.Tags = append(evt.Tags, nostr.Tag{prop.tag, v})
+				tag := nostr.Tag{prop.tag}
+				if prop.multi {
+					manyV := split(v)
+					tag = append(tag, manyV...)
+				} else {
+					tag = append(tag, v)
+				}
+				evt.Tags = append(evt.Tags, tag)
 			} else if v == "" && !prop.optional {
 				return fmt.Errorf("'%s' is mandatory", prop.name)
 			}

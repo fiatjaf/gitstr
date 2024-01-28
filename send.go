@@ -223,7 +223,7 @@ func getAndApplyTargetRepository(
 	}
 
 	for _, tag := range repo.Event.Tags.GetAll([]string{"patches", ""}) {
-		patchRelays = append(patchRelays, tag[1])
+		patchRelays = append(patchRelays, tag[1:]...)
 	}
 
 	evt.Tags = append(evt.Tags,

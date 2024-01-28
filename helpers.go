@@ -256,3 +256,16 @@ func edit(initial string) (string, error) {
 
 	return string(b), nil
 }
+
+func split(str string) []string {
+	res := make([]string, 0, 5)
+	for _, v := range strings.Split(str, " ") {
+		for _, v := range strings.Split(v, ",") {
+			v = strings.TrimSpace(v)
+			if v != "" {
+				res = append(res, v)
+			}
+		}
+	}
+	return res
+}
