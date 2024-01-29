@@ -25,8 +25,8 @@ var send = &cli.Command{
 			Usage: "if we should save the secret key to git config --local",
 		},
 		&cli.StringFlag{
-			Name:    "repository",
-			Aliases: []string{"a", "to"},
+			Name:    "to",
+			Aliases: []string{"a", "repository"},
 			Usage:   "repository reference, as an naddr1... code",
 		},
 		&cli.StringSliceFlag{
@@ -170,7 +170,7 @@ func getAndApplyTargetRepository(
 		return nil, nil
 	}
 
-	target := c.String("repository")
+	target := c.String("to")
 	var stored string
 	if target == "" {
 		target, _ = git("config", "--local", "str.upstream")
