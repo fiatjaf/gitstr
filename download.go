@@ -56,9 +56,7 @@ var download = &cli.Command{
 			filter := nostr.Filter{
 				Limit: int(limit),
 				Kinds: []int{PatchKind},
-				Tags: nostr.TagMap{
-					"a": []string{fmt.Sprintf("%d:%s:%s", RepoAnnouncementKind, pk, id)},
-				},
+				Tags:  nostr.TagMap{},
 			}
 
 			relays := slices.Clone(relays)
@@ -73,9 +71,11 @@ var download = &cli.Command{
 				switch prefix {
 				case "npub":
 					filter.Authors = append(filter.Authors, data.(string))
+					filter.Tags["a"] = []string{fmt.Sprintf("%d:%s:%s", RepoAnnouncementKind, pk, id)}
 				case "nprofile":
 					pp := data.(nostr.ProfilePointer)
 					filter.Authors = append(filter.Authors, pp.PublicKey)
+					filter.Tags["a"] = []string{fmt.Sprintf("%d:%s:%s", RepoAnnouncementKind, pk, id)}
 					relays = append(relays, pp.Relays...)
 				case "nevent":
 					ep := data.(nostr.EventPointer)
@@ -105,6 +105,7 @@ var download = &cli.Command{
 			} else if err := os.MkdirAll(base, 0755); err != nil {
 				return fmt.Errorf("failed to create .git/str directory")
 			}
+
 			for ie := range pool.SubManyEose(ctx, relays, nostr.Filters{filter}) {
 				nevent, _ := nip19.EncodeEvent(ie.ID, nil, "")
 				npub, _ := nip19.EncodePublicKey(ie.PubKey)
