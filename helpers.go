@@ -170,7 +170,7 @@ func promptDecrypt(ncryptsec1 string) (string, error) {
 		if i > 1 {
 			attemptStr = fmt.Sprintf(" [%d/3]", i)
 		}
-		password, err := ask("type the password to decrypt your secret key"+attemptStr+": ", "", nil)
+		password, err := askPassword("type the password to decrypt your secret key"+attemptStr+": ", nil)
 		if err != nil {
 			return "", err
 		}
@@ -184,11 +184,26 @@ func promptDecrypt(ncryptsec1 string) (string, error) {
 }
 
 func ask(msg string, defaultValue string, shouldAskAgain func(answer string) bool) (string, error) {
-	rl, err := readline.NewEx(&readline.Config{
+	return _ask(&readline.Config{
 		Prompt:                 color.YellowString(msg),
 		InterruptPrompt:        "^C",
 		DisableAutoSaveHistory: true,
-	})
+	}, msg, defaultValue, shouldAskAgain)
+}
+
+func askPassword(msg string, shouldAskAgain func(answer string) bool) (string, error) {
+	config := &readline.Config{
+		Prompt:                 color.YellowString(msg),
+		InterruptPrompt:        "^C",
+		DisableAutoSaveHistory: true,
+		EnableMask:             true,
+		MaskRune:               '*',
+	}
+	return _ask(config, msg, "", shouldAskAgain)
+}
+
+func _ask(config *readline.Config, msg string, defaultValue string, shouldAskAgain func(answer string) bool) (string, error) {
+	rl, err := readline.NewEx(config)
 	if err != nil {
 		return "", err
 	}
