@@ -63,52 +63,69 @@ var send = &cli.Command{
 		if commit == "" {
 			return fmt.Errorf("no commit or file specified")
 		}
-		var patch string
+		var patches []string
 		if contents, err := os.ReadFile(commit); os.IsNotExist(err) {
-			patch, err = git("format-patch", "--stdout", commit)
+			out, err := git("format-patch", "--stdout", commit)
 			if err != nil {
 				return fmt.Errorf("error getting patch: %w", err)
 			}
+			patches = strings.Split(out, "\n\nFrom ")
+			// readd the "From " that got split out
+			for i, patch := range patches {
+				patches[i] = "From " + patch
+			}
 		} else if err == nil {
-			patch = string(contents)
+			patches = []string{string(contents)}
 		} else {
 			return fmt.Errorf("error reading file '%s': %w", commit, err)
 		}
-		if patch == "" {
+
+		patches = filterSlice(patches, func(v string) bool { return v != "" })
+		if len(patches) == 0 {
 			return fmt.Errorf("the patch for '%s' is empty", commit)
 		}
 
-		if c.Bool("annotate") {
-			var err error
-			patch, err = edit(patch)
-			if err != nil {
-				return fmt.Errorf("error annotating patch: %w", err)
+		// create the events
+		events := make([]*nostr.Event, len(patches))
+		for i := range patches {
+			events[i] = &nostr.Event{
+				CreatedAt: nostr.Now(),
+				Kind:      PatchKind,
+				Tags: nostr.Tags{
+					nostr.Tag{"alt", "a git patch"},
+				},
 			}
 		}
 
-		evt := nostr.Event{
-			CreatedAt: nostr.Now(),
-			Kind:      PatchKind,
-			Tags: nostr.Tags{
-				nostr.Tag{"alt", "a git patch"},
-			},
-			Content: patch,
+		// get metadata and apply it to events
+		patchRelays, err := getAndApplyTargetRepository(ctx, c, events, c.StringSlice("relay"))
+		if err != nil {
+			return err
 		}
-
-		// target repository
-		patchRelays, err := getAndApplyTargetRepository(ctx, c, &evt, c.StringSlice("relay"))
+		threadRelays, err := getAndApplyTargetThread(ctx, c, events)
+		if err != nil {
+			return err
+		}
+		mentionRelays, err := getAndApplyTargetMentions(ctx, c, events)
 		if err != nil {
 			return err
 		}
 
-		threadRelays, err := getAndApplyTargetThread(ctx, c, &evt)
-		if err != nil {
-			return err
+		// check if there are relays available
+		targetRelays := concatSlices(patchRelays, threadRelays, mentionRelays, c.StringSlice("relay"))
+		if len(targetRelays) == 0 {
+			return fmt.Errorf("got no relays to publish to, you can specify one with --relay/-r")
 		}
 
-		mentionRelays, err := getAndApplyTargetMentions(ctx, c, &evt)
-		if err != nil {
-			return err
+		// possibly annotate and assign patch content to events
+		for i, patch := range patches {
+			if c.Bool("annotate") {
+				var err error
+				events[i].Content, err = edit(patch)
+				if err != nil {
+					return fmt.Errorf("error annotating patch: %w", err)
+				}
+			}
 		}
 
 		// gather the secret key
@@ -124,36 +141,38 @@ var send = &cli.Command{
 			}
 		}
 
-		err = evt.Sign(sec)
-		if err != nil {
-			return fmt.Errorf("error signing message: %w", err)
-		}
-
-		targetRelays := concatSlices(patchRelays, threadRelays, mentionRelays, c.StringSlice("relay"))
-		goodRelays := make([]string, 0, len(targetRelays))
-
-		fmt.Fprintf(os.Stderr, "\nwill publish event\n%s", sprintPatch(evt))
-		if confirm("proceed to publish the event? ") {
-			for _, r := range targetRelays {
-				relay, err := pool.EnsureRelay(r)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "failed to connect to '%s': %s\n", r, err)
-					continue
-				}
-				if err := relay.Publish(ctx, evt); err != nil {
-					fmt.Fprintf(os.Stderr, "failed to publish to '%s': %s\n", r, err)
-					continue
-				}
-				goodRelays = append(goodRelays, relay.URL)
+		// publish all the patches
+		for _, evt := range events {
+			err = evt.Sign(sec)
+			if err != nil {
+				return fmt.Errorf("error signing message: %w", err)
 			}
-		}
-		if len(goodRelays) == 0 {
-			fmt.Println(evt)
-			return fmt.Errorf("didn't publish the event")
-		}
 
-		code, _ := nip19.EncodeEvent(evt.GetID(), goodRelays, evt.PubKey)
-		fmt.Println(code)
+			goodRelays := make([]string, 0, len(targetRelays))
+			fmt.Fprintf(os.Stderr, "\nwill publish event\n%s", sprintPatch(evt))
+			if confirm("proceed to publish the event? ") {
+				for _, r := range targetRelays {
+					relay, err := pool.EnsureRelay(r)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "failed to connect to '%s': %s\n", r, err)
+						continue
+					}
+					if err := relay.Publish(ctx, *evt); err != nil {
+						fmt.Fprintf(os.Stderr, "failed to publish to '%s': %s\n", r, err)
+						continue
+					}
+					goodRelays = append(goodRelays, relay.URL)
+				}
+			}
+			if len(goodRelays) == 0 {
+				fmt.Println(evt)
+				fmt.Fprintln(os.Stderr, "didn't publish the event")
+				continue
+			}
+
+			code, _ := nip19.EncodeEvent(evt.GetID(), goodRelays, evt.PubKey)
+			fmt.Println(code)
+		}
 
 		return nil
 	},
@@ -162,7 +181,7 @@ var send = &cli.Command{
 func getAndApplyTargetRepository(
 	ctx context.Context,
 	c *cli.Command,
-	evt *nostr.Event,
+	evts []*nostr.Event,
 	extraRelays []string,
 ) (patchRelays []string, err error) {
 	if c.Bool("dangling") {
@@ -226,14 +245,16 @@ func getAndApplyTargetRepository(
 		patchRelays = append(patchRelays, tag[1:]...)
 	}
 
-	evt.Tags = append(evt.Tags,
-		nostr.Tag{
-			"a",
-			fmt.Sprintf("%d:%s:%s", ep.Kind, ep.PublicKey, ep.Identifier),
-			repo.Relay.URL,
-		},
-		nostr.Tag{"p", ep.PublicKey},
-	)
+	for _, evt := range evts {
+		evt.Tags = append(evt.Tags,
+			nostr.Tag{
+				"a",
+				fmt.Sprintf("%d:%s:%s", ep.Kind, ep.PublicKey, ep.Identifier),
+				repo.Relay.URL,
+			},
+			nostr.Tag{"p", ep.PublicKey},
+		)
+	}
 
 	return patchRelays, nil
 }
@@ -241,7 +262,7 @@ func getAndApplyTargetRepository(
 func getAndApplyTargetThread(
 	ctx context.Context,
 	c *cli.Command,
-	evt *nostr.Event,
+	evts []*nostr.Event,
 ) (mentionRelays []string, err error) {
 	target := c.String("in-reply-to")
 	if target != "" {
@@ -258,7 +279,9 @@ func getAndApplyTargetThread(
 		if nostr.IsValid32ByteHex(target) {
 			return nil, fmt.Errorf("invalid target thread id")
 		}
-		evt.Tags = append(evt.Tags, nostr.Tag{"e", target})
+		for _, evt := range evts {
+			evt.Tags = append(evt.Tags, nostr.Tag{"e", target})
+		}
 	}
 
 	// TODO: fetch user relays, fetch thread root, return related relays so we can submit the patch to those too
@@ -268,7 +291,7 @@ func getAndApplyTargetThread(
 func getAndApplyTargetMentions(
 	ctx context.Context,
 	c *cli.Command,
-	evt *nostr.Event,
+	evts []*nostr.Event,
 ) (mentionRelays []string, err error) {
 	for _, target := range c.StringSlice("cc") {
 		prefix, data, err := nip19.Decode(target)
@@ -286,7 +309,9 @@ func getAndApplyTargetMentions(
 		target = strings.TrimSpace(target)
 
 		if nostr.IsValid32ByteHex(target) {
-			evt.Tags = append(evt.Tags, nostr.Tag{"p", target})
+			for _, evt := range evts {
+				evt.Tags = append(evt.Tags, nostr.Tag{"p", target})
+			}
 		} else {
 			return nil, fmt.Errorf("invalid mention '%s'", target)
 		}

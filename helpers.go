@@ -119,17 +119,21 @@ func sprintRepository(repo *nostr.Event) string {
 	return res
 }
 
-func sprintPatch(patch nostr.Event) string {
+func sprintPatch(patch *nostr.Event) string {
 	res := ""
 	npub, _ := nip19.EncodePublicKey(patch.PubKey)
-	target := strings.Split((*patch.Tags.GetFirst([]string{"a", ""}))[1], ":")
-	targetId := target[2]
-	targetNpub, _ := nip19.EncodePublicKey(target[1])
-
 	res += "\nid: " + patch.ID
 	res += "\nauthor: " + npub
-	res += "\ntarget repo: " + targetId
-	res += "\ntarget author: " + targetNpub
+
+	aTag := patch.Tags.GetFirst([]string{"a", ""})
+	if aTag != nil {
+		target := strings.Split((*aTag)[1], ":")
+		targetId := target[2]
+		targetNpub, _ := nip19.EncodePublicKey(target[1])
+		res += "\ntarget repo: " + targetId
+		res += "\ntarget author: " + targetNpub
+	}
+
 	res += "\n\n" + patch.Content
 	// TODO: colors
 	return res
@@ -234,6 +238,19 @@ func concatSlices[V any](slices ...[]V) []V {
 		pos += len(ss)
 	}
 	return newSlice
+}
+
+func filterSlice[V any](slice []V, keep func(v V) bool) []V {
+	keeping := 0
+	for i := len(slice) - 1; i >= 0; i-- {
+		v := slice[i]
+		if keep(v) {
+			keeping++
+		} else {
+			copy(slice[i:], slice[i+1:])
+		}
+	}
+	return slice[0:keeping]
 }
 
 func edit(initial string) (string, error) {
