@@ -128,6 +128,8 @@ var send = &cli.Command{
 				if err != nil {
 					return fmt.Errorf("error annotating patch: %w", err)
 				}
+			} else {
+				events[i].Content = patch
 			}
 		}
 
