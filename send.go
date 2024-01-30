@@ -59,30 +59,33 @@ var send = &cli.Command{
 	},
 	Action: func(ctx context.Context, c *cli.Command) error {
 		// commit or file
-		commit := c.Args().First()
-		if commit == "" {
-			return fmt.Errorf("no commit or file specified")
-		}
-		var patches []string
-		if contents, err := os.ReadFile(commit); os.IsNotExist(err) {
-			out, err := git("format-patch", "--stdout", commit)
-			if err != nil {
-				return fmt.Errorf("error getting patch: %w", err)
+		patches := make([]string, 0, 10)
+		for _, arg := range c.Args().Slice() {
+			if arg == "" {
+				return fmt.Errorf("no commit or patch file specified")
 			}
-			patches = strings.Split(out, "\n\nFrom ")
-			// readd the "From " that got split out
-			for i, patch := range patches {
-				patches[i] = "From " + patch
+			if contents, err := os.ReadFile(arg); err != nil && !os.IsNotExist(err) {
+				// it's a file
+				return fmt.Errorf("error reading file '%s': %w", arg, err)
+			} else if os.IsNotExist(err) {
+				// it's a git reference
+				out, err := git("format-patch", "--stdout", arg)
+				if err != nil {
+					return fmt.Errorf("error getting patch: %w", err)
+				}
+
+				// split multiple patches into separate strings
+				for _, patch := range strings.Split(out, "\n\nFrom ") {
+					patches = append(patches, "From "+patch)
+				}
+			} else {
+				patches = append(patches, string(contents))
 			}
-		} else if err == nil {
-			patches = []string{string(contents)}
-		} else {
-			return fmt.Errorf("error reading file '%s': %w", commit, err)
 		}
 
 		patches = filterSlice(patches, func(v string) bool { return v != "" })
 		if len(patches) == 0 {
-			return fmt.Errorf("the patch for '%s' is empty", commit)
+			return fmt.Errorf("couldn't get any patches for %v", c.Args().Slice())
 		}
 
 		// create the events
