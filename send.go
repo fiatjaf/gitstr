@@ -15,7 +15,7 @@ var send = &cli.Command{
 	Name:        "send",
 	UsageText:   "git str send <commit or patch-file>",
 	Description: "",
-	Flags: []cli.Flag{
+	Flags: append([]cli.Flag{
 		&cli.StringFlag{
 			Name:  "sec",
 			Usage: "secret key to sign the patch, as hex or nsec",
@@ -56,8 +56,19 @@ var send = &cli.Command{
 			Aliases: []string{"y"},
 			Usage:   "do not ask for confirmation before publishing",
 		},
-	},
+	}, gitFormatPatchFlags...),
 	Action: func(ctx context.Context, c *cli.Command) error {
+		// git-format-patch extra flags that will be handled directly to it
+		gitFormatPatchArgs := []string{"format-patch", "--stdout"}
+		for _, fd := range gitFormatPatchFlags {
+			switch flag := fd.(type) {
+			case *cli.StringFlag:
+				gitFormatPatchArgs = append(gitFormatPatchArgs, "--"+flag.Name+"="+c.String(flag.Name))
+			case *cli.BoolFlag:
+				gitFormatPatchArgs = append(gitFormatPatchArgs, "--"+flag.Name)
+			}
+		}
+
 		// commit or file
 		patches := make([]string, 0, 10)
 		for _, arg := range c.Args().Slice() {
@@ -69,7 +80,10 @@ var send = &cli.Command{
 				return fmt.Errorf("error reading file '%s': %w", arg, err)
 			} else if os.IsNotExist(err) {
 				// it's a git reference
-				out, err := git("format-patch", "--stdout", arg)
+				args := make([]string, len(gitFormatPatchArgs)+1)
+				copy(args, gitFormatPatchArgs)
+				args[len(gitFormatPatchArgs)] = arg
+				out, err := git(args...)
 				if err != nil {
 					return fmt.Errorf("error getting patch: %w", err)
 				}
@@ -327,4 +341,8 @@ func getAndApplyTargetMentions(
 
 	// TODO: fetch user relays, fetch thread root, return related relays so we can submit the patch to those too
 	return nil, nil
+}
+
+var gitFormatPatchFlags = []cli.Flag{
+	&cli.StringFlag{Name: "base", Hidden: true},
 }

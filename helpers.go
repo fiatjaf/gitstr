@@ -1,6 +1,7 @@
 package gitstr
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -104,8 +105,14 @@ func getRepositoryPublicKey() string {
 	return ""
 }
 
-func git(cmd ...string) (string, error) {
-	v, err := exec.Command("git", cmd...).Output()
+func git(args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+	v, err := cmd.Output()
+	if err != nil {
+		err = fmt.Errorf("%w (called %v): %s", err, cmd.Args, stderr.String())
+	}
 	return strings.TrimSpace(string(v)), err
 }
 
