@@ -61,11 +61,13 @@ var send = &cli.Command{
 		// git-format-patch extra flags that will be handled directly to it
 		gitFormatPatchArgs := []string{"format-patch", "--stdout"}
 		for _, fd := range gitFormatPatchFlags {
-			switch flag := fd.(type) {
-			case *cli.StringFlag:
-				gitFormatPatchArgs = append(gitFormatPatchArgs, "--"+flag.Name+"="+c.String(flag.Name))
-			case *cli.BoolFlag:
-				gitFormatPatchArgs = append(gitFormatPatchArgs, "--"+flag.Name)
+			if fd.IsSet() {
+				switch flag := fd.(type) {
+				case *cli.StringFlag:
+					gitFormatPatchArgs = append(gitFormatPatchArgs, "--"+flag.Name+"="+c.String(flag.Name))
+				case *cli.BoolFlag:
+					gitFormatPatchArgs = append(gitFormatPatchArgs, "--"+flag.Name)
+				}
 			}
 		}
 
