@@ -32,13 +32,9 @@ var download = &cli.Command{
 	},
 	Action: func(ctx context.Context, c *cli.Command) error {
 		id := getRepositoryID()
-		if id == "" {
-			return fmt.Errorf("no repository id found in `config str.id`")
-		}
-
 		pk := getRepositoryPublicKey()
-		if pk == "" {
-			return fmt.Errorf("no repository pubkey found in `git config str.publickey`")
+		if pk == "" || id == "" {
+			fmt.Fprintf(os.Stderr, "no repository id and pubkey found on `git config`, this command will only work with specific naddr or nevent patches.\n")
 		}
 
 		limit := c.Int("limit")
@@ -58,7 +54,6 @@ var download = &cli.Command{
 				Kinds: []int{PatchKind},
 				Tags:  nostr.TagMap{},
 			}
-
 			relays := slices.Clone(relays)
 
 			if arg != "" {
@@ -83,7 +78,7 @@ var download = &cli.Command{
 						fmt.Fprintf(os.Stderr, "invalid argument %s: expected an encoded kind %d or nothing\n", arg, PatchKind)
 						continue
 					}
-					filter.IDs = append(filter.IDs, ep.ID)
+					filter = nostr.Filter{IDs: []string{ep.ID}}
 					relays = append(relays, ep.Relays...)
 				case "naddr":
 					ep := data.(nostr.EntityPointer)
@@ -92,9 +87,16 @@ var download = &cli.Command{
 						continue
 					}
 
-					filter.Tags["a"] = []string{fmt.Sprintf("%d:%s:%s", RepoAnnouncementKind, ep.PublicKey, ep.Identifier)}
-					filter.Authors = append(filter.Authors, ep.PublicKey)
+					filter = nostr.Filter{
+						Limit: int(limit),
+						Kinds: []int{PatchKind},
+						Tags: nostr.TagMap{
+							"a": []string{fmt.Sprintf("%d:%s:%s", RepoAnnouncementKind, ep.PublicKey, ep.Identifier)},
+						},
+					}
 					relays = append(relays, ep.Relays...)
+				default:
+					continue
 				}
 			}
 
