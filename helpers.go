@@ -34,9 +34,10 @@ func gatherSecretKeyOrBunker(ctx context.Context, c *cli.Command) (
 ) {
 	bunkerURL := c.String("connect")
 	if bunkerURL == "" {
-		bunkerURL, _ = git("config", "--local", "str.bunker", bunkerURL)
+		bunkerURL, _ = git("config", "--local", "str.bunker")
 	}
 	if bunkerURL != "" {
+		logf(color.YellowString("connecting to bunker...\n"))
 		clientKey := nostr.GeneratePrivateKey()
 		bunker, err := nip46.ConnectBunker(ctx, clientKey, bunkerURL, nil)
 		if bunker != nil {
