@@ -2,6 +2,7 @@ package gitstr
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
+	"github.com/nbd-wtf/go-nostr/nip46"
 	"github.com/nbd-wtf/go-nostr/nip49"
 	"github.com/urfave/cli/v3"
 )
@@ -24,7 +26,18 @@ func isPiped() bool {
 	return stat.Mode()&os.ModeCharDevice == 0
 }
 
-func gatherSecretKey(c *cli.Command) (key string, encrypted bool, err error) {
+func gatherSecretKeyOrBunker(ctx context.Context, c *cli.Command) (
+	bunker *nip46.BunkerClient,
+	key string,
+	encrypted bool,
+	err error,
+) {
+	if bunkerURL := c.String("connect"); bunkerURL != "" {
+		clientKey := nostr.GeneratePrivateKey()
+		bunker, err := nip46.ConnectBunker(ctx, clientKey, bunkerURL, nil)
+		return bunker, "", false, err
+	}
+
 	sec := c.String("sec")
 
 	if sec == "" && !c.IsSet("sec") {
@@ -49,23 +62,23 @@ func gatherSecretKey(c *cli.Command) (key string, encrypted bool, err error) {
 			}
 		})
 		if sec == "" {
-			return "", false, fmt.Errorf("couldn't gather secret key")
+			return nil, "", false, fmt.Errorf("couldn't gather secret key")
 		}
 	}
 
 	if strings.HasPrefix(sec, "ncryptsec1") {
 		git("config", "--local", "str.secretkey", sec)
-		return sec, true, nil
+		return nil, sec, true, nil
 	} else {
 		if strings.HasPrefix(sec, "nsec1") {
 			_, hex, err := nip19.Decode(sec)
 			if err != nil {
-				return "", false, fmt.Errorf("invalid nsec: %w", err)
+				return nil, "", false, fmt.Errorf("invalid nsec: %w", err)
 			}
 			sec = hex.(string)
 		}
 		if ok := nostr.IsValid32ByteHex(sec); !ok {
-			return "", false, fmt.Errorf("invalid secret key")
+			return nil, "", false, fmt.Errorf("invalid secret key")
 		}
 	}
 
@@ -74,7 +87,7 @@ func gatherSecretKey(c *cli.Command) (key string, encrypted bool, err error) {
 		git("config", "--local", "str.secretkey", sec)
 	}
 
-	return sec, false, nil
+	return nil, sec, false, nil
 }
 
 func getPatchRelays() []string {

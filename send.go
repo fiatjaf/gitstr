@@ -20,6 +20,10 @@ var send = &cli.Command{
 			Name:  "sec",
 			Usage: "secret key to sign the patch, as hex or nsec",
 		},
+		&cli.StringFlag{
+			Name:  "connect",
+			Usage: "sign event using NIP-46, expects a bunker://... URL",
+		},
 		&cli.BoolFlag{
 			Name:  "store-sec",
 			Usage: "if we should save the secret key to git config --local",
@@ -150,11 +154,10 @@ var send = &cli.Command{
 		}
 
 		// gather the secret key
-		sec, isEncrypted, err := gatherSecretKey(c)
+		bunker, sec, isEncrypted, err := gatherSecretKeyOrBunker(ctx, c)
 		if err != nil {
 			return err
 		}
-
 		if isEncrypted {
 			sec, err = promptDecrypt(sec)
 			if err != nil {
@@ -164,9 +167,16 @@ var send = &cli.Command{
 
 		// publish all the patches
 		for _, evt := range events {
-			err = evt.Sign(sec)
-			if err != nil {
-				return fmt.Errorf("error signing message: %w", err)
+			if bunker != nil {
+				err = bunker.SignEvent(ctx, evt)
+				if err != nil {
+					return fmt.Errorf("error signing event with bunker: %w", err)
+				}
+			} else {
+				err = evt.Sign(sec)
+				if err != nil {
+					return fmt.Errorf("error signing event with key: %w", err)
+				}
 			}
 
 			goodRelays := make([]string, 0, len(targetRelays))

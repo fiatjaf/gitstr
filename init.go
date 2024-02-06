@@ -25,6 +25,10 @@ var initRepo = &cli.Command{
 			Name:  "sec",
 			Usage: "secret key to sign the repository announcement",
 		},
+		&cli.StringFlag{
+			Name:  "connect",
+			Usage: "sign event using NIP-46, expects a bunker://... URL",
+		},
 		&cli.BoolFlag{
 			Name:  "store-sec",
 			Usage: "if we should save the secret key to git config --local",
@@ -130,7 +134,7 @@ var initRepo = &cli.Command{
 			}
 		}
 
-		sec, isEncrypted, err := gatherSecretKey(c)
+		bunker, sec, isEncrypted, err := gatherSecretKeyOrBunker(ctx, c)
 		if err != nil {
 			return fmt.Errorf("failed to get secret key: %w", err)
 		}
@@ -142,8 +146,16 @@ var initRepo = &cli.Command{
 			}
 		}
 
-		if err := evt.Sign(sec); err != nil {
-			return fmt.Errorf("failed to sign: %w", err)
+		if bunker != nil {
+			err = bunker.SignEvent(ctx, &evt)
+			if err != nil {
+				return fmt.Errorf("error signing event with bunker: %w", err)
+			}
+		} else {
+			err = evt.Sign(sec)
+			if err != nil {
+				return fmt.Errorf("error signing event with key: %w", err)
+			}
 		}
 
 		git("config", "--local", "str.publickey", evt.PubKey)

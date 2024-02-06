@@ -7,7 +7,7 @@ toolchain go1.21.4
 require (
 	github.com/chzyer/readline v1.5.1
 	github.com/fatih/color v1.16.0
-	github.com/nbd-wtf/go-nostr v0.28.2
+	github.com/nbd-wtf/go-nostr v0.28.4
 	github.com/urfave/cli/v3 v3.0.0-alpha8
 )
 
