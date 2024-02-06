@@ -32,14 +32,20 @@ func gatherSecretKeyOrBunker(ctx context.Context, c *cli.Command) (
 	encrypted bool,
 	err error,
 ) {
-	if bunkerURL := c.String("connect"); bunkerURL != "" {
+	bunkerURL := c.String("connect")
+	if bunkerURL == "" {
+		bunkerURL, _ = git("config", "--local", "str.bunker", bunkerURL)
+	}
+	if bunkerURL != "" {
 		clientKey := nostr.GeneratePrivateKey()
 		bunker, err := nip46.ConnectBunker(ctx, clientKey, bunkerURL, nil)
+		if bunker != nil {
+			git("config", "--local", "str.bunker", bunkerURL)
+		}
 		return bunker, "", false, err
 	}
 
 	sec := c.String("sec")
-
 	if sec == "" && !c.IsSet("sec") {
 		sec, _ = git("config", "--local", "str.secretkey")
 	}
