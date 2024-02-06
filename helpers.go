@@ -21,6 +21,10 @@ import (
 
 var subjectRegex = regexp.MustCompile(`(?m)^Subject: (.*)$`)
 
+func logf(str string, args ...any) {
+	fmt.Fprintf(os.Stderr, fmt.Sprintf(str, args...))
+}
+
 func isPiped() bool {
 	stat, _ := os.Stdin.Stat()
 	return stat.Mode()&os.ModeCharDevice == 0
@@ -139,28 +143,30 @@ func git(args ...string) (string, error) {
 func sprintRepository(repo *nostr.Event) string {
 	res := ""
 	npub, _ := nip19.EncodePublicKey(repo.PubKey)
-	res += "\nauthor: " + npub
-	res += "\nid: " + (*repo.Tags.GetFirst([]string{"d", ""}))[1]
+	res += "\n  author: " + npub
+	res += "\n  id: " + (*repo.Tags.GetFirst([]string{"d", ""}))[1]
 	res += "\n"
 	// TODO: more stuff
-	return res
+	return color.New(color.Bold).Sprint(res)
 }
 
 func sprintPatch(patch *nostr.Event) string {
 	res := ""
 	npub, _ := nip19.EncodePublicKey(patch.PubKey)
-	res += "\nid: " + patch.ID
-	res += "\nauthor: " + npub
+	res += "\n  id: " + patch.ID
+	res += "\n  author: " + npub
 
 	aTag := patch.Tags.GetFirst([]string{"a", ""})
 	if aTag != nil {
 		target := strings.Split((*aTag)[1], ":")
 		targetId := target[2]
 		targetNpub, _ := nip19.EncodePublicKey(target[1])
-		res += "\ntarget repo: " + targetId
-		res += "\ntarget author: " + targetNpub
+		res += "\n  target repo: " + targetId
+		res += "\n  target author: " + targetNpub
 	}
+	// TODO: more stuff
 
+	res = color.New(color.Bold).Sprint(res)
 	res += "\n\n" + patch.Content
 	// TODO: colors
 	return res
@@ -216,7 +222,7 @@ func promptDecrypt(ncryptsec1 string) (string, error) {
 
 func ask(msg string, defaultValue string, shouldAskAgain func(answer string) bool) (string, error) {
 	return _ask(&readline.Config{
-		Prompt:                 color.YellowString(msg),
+		Prompt:                 color.CyanString(msg),
 		InterruptPrompt:        "^C",
 		DisableAutoSaveHistory: true,
 	}, msg, defaultValue, shouldAskAgain)
@@ -224,7 +230,7 @@ func ask(msg string, defaultValue string, shouldAskAgain func(answer string) boo
 
 func askPassword(msg string, shouldAskAgain func(answer string) bool) (string, error) {
 	config := &readline.Config{
-		Prompt:                 color.YellowString(msg),
+		Prompt:                 color.CyanString(msg),
 		InterruptPrompt:        "^C",
 		DisableAutoSaveHistory: true,
 		EnableMask:             true,

@@ -34,7 +34,7 @@ var download = &cli.Command{
 		id := getRepositoryID()
 		pk := getRepositoryPublicKey()
 		if pk == "" || id == "" {
-			fmt.Fprintf(os.Stderr, "no repository id and pubkey found on `git config`, this command will only work with specific naddr or nevent patches.\n")
+			logf("no repository id and pubkey found on `git config`, this command will only work with specific naddr or nevent patches.\n")
 		}
 
 		limit := c.Int("limit")
@@ -59,7 +59,7 @@ var download = &cli.Command{
 			if arg != "" {
 				prefix, data, err := nip19.Decode(arg)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "invalid argument '%s': %s\n", arg, err)
+					logf("invalid argument '%s': %s\n", arg, err)
 					continue
 				}
 
@@ -75,7 +75,7 @@ var download = &cli.Command{
 				case "nevent":
 					ep := data.(nostr.EventPointer)
 					if ep.Kind != 0 && ep.Kind != PatchKind {
-						fmt.Fprintf(os.Stderr, "invalid argument %s: expected an encoded kind %d or nothing\n", arg, PatchKind)
+						logf("invalid argument %s: expected an encoded kind %d or nothing\n", arg, PatchKind)
 						continue
 					}
 					filter = nostr.Filter{IDs: []string{ep.ID}}
@@ -83,7 +83,7 @@ var download = &cli.Command{
 				case "naddr":
 					ep := data.(nostr.EntityPointer)
 					if ep.Kind != RepoAnnouncementKind {
-						fmt.Fprintf(os.Stderr, "invalid argument %s: expected an encoded kind %d\n", arg, RepoAnnouncementKind)
+						logf("invalid argument %s: expected an encoded kind %d\n", arg, RepoAnnouncementKind)
 						continue
 					}
 
@@ -120,7 +120,7 @@ var download = &cli.Command{
 				fileName := base + "/" + fmt.Sprintf("%s [%s] %s",
 					ie.CreatedAt.Time().Format(time.DateOnly), nevent[65:], subject)
 				if _, err := os.Stat(fileName); os.IsNotExist(err) {
-					fmt.Fprintf(os.Stderr, "- downloaded patch %s from %s, saved as '%s'\n",
+					logf("- downloaded patch %s from %s, saved as '%s'\n",
 						ie.Event.ID, npub, color.New(color.Underline).Sprint(fileName))
 					if err := os.WriteFile(fileName, []byte(ie.Event.Content), 0644); err != nil {
 						return fmt.Errorf("failed to write '%s': %w", fileName, err)

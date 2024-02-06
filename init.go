@@ -163,16 +163,16 @@ var initRepo = &cli.Command{
 		relays := c.StringSlice("relay")
 		successRelays := make([]string, 0, len(relays))
 		for _, r := range relays {
-			fmt.Fprintf(os.Stderr, "publishing to %s...", r)
+			logf("publishing to %s...", r)
 			if relay, err := pool.EnsureRelay(r); err == nil {
 				if err := relay.Publish(ctx, evt); err != nil {
-					fmt.Fprintf(os.Stderr, " failed: %s\n", err)
+					logf(" failed: %s\n", err)
 				} else {
-					fmt.Fprintf(os.Stderr, "done\n")
+					logf("done\n")
 					successRelays = append(successRelays, r)
 				}
 			} else {
-				fmt.Fprintf(os.Stderr, " failed: %s\n", err)
+				logf(" failed: %s\n", err)
 			}
 		}
 

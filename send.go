@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
 	"github.com/urfave/cli/v3"
@@ -168,6 +169,7 @@ var send = &cli.Command{
 		// publish all the patches
 		for _, evt := range events {
 			if bunker != nil {
+				logf(color.YellowString("signing event with bunker..."))
 				err = bunker.SignEvent(ctx, evt)
 				if err != nil {
 					return fmt.Errorf("error signing event with bunker: %w", err)
@@ -180,16 +182,16 @@ var send = &cli.Command{
 			}
 
 			goodRelays := make([]string, 0, len(targetRelays))
-			fmt.Fprintf(os.Stderr, "\nwill publish event\n%s", sprintPatch(evt))
+			logf("\n%s", sprintPatch(evt))
 			if confirm("proceed to publish the event? ") {
 				for _, r := range targetRelays {
 					relay, err := pool.EnsureRelay(r)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "failed to connect to '%s': %s\n", r, err)
+						logf("failed to connect to '%s': %s\n", r, err)
 						continue
 					}
 					if err := relay.Publish(ctx, *evt); err != nil {
-						fmt.Fprintf(os.Stderr, "failed to publish to '%s': %s\n", r, err)
+						logf("failed to publish to '%s': %s\n", r, err)
 						continue
 					}
 					goodRelays = append(goodRelays, relay.URL)
@@ -197,7 +199,7 @@ var send = &cli.Command{
 			}
 			if len(goodRelays) == 0 {
 				fmt.Println(evt)
-				fmt.Fprintln(os.Stderr, "didn't publish the event")
+				logf(color.RedString("didn't publish the event\n"))
 				continue
 			}
 
@@ -216,7 +218,7 @@ func getAndApplyTargetRepository(
 	extraRelays []string,
 ) (patchRelays []string, err error) {
 	if c.Bool("dangling") {
-		fmt.Fprintf(os.Stderr, "this patch won't target any specific repository")
+		logf("this patch won't target any specific repository")
 		return nil, nil
 	}
 
@@ -264,7 +266,8 @@ func getAndApplyTargetRepository(
 		return nil, fmt.Errorf("couldn't find event for %s", filter)
 	}
 
-	fmt.Fprintf(os.Stderr, "found upstream repository %s\n%s\n", target, sprintRepository(repo.Event))
+	logf("%s %s\n%s\n", color.YellowString("found upstream repository"),
+		target, sprintRepository(repo.Event))
 
 	if stored != target {
 		if confirm("store it as your main upstream target? ") {
