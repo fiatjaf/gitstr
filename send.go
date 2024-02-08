@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/fatih/color"
@@ -117,6 +118,7 @@ var send = &cli.Command{
 				Kind:      PatchKind,
 				Tags: nostr.Tags{
 					nostr.Tag{"alt", "a git patch"},
+					nostr.Tag{"t", "root"},
 				},
 			}
 		}
@@ -318,6 +320,9 @@ func getAndApplyTargetThread(
 		}
 		for _, evt := range evts {
 			evt.Tags = append(evt.Tags, nostr.Tag{"e", target})
+			evt.Tags = slices.DeleteFunc(evt.Tags, func(tag nostr.Tag) bool {
+				return len(tag) >= 2 && tag[0] == "t" && tag[1] == "root"
+			})
 		}
 	}
 
