@@ -19,16 +19,9 @@ var send = &cli.Command{
 	Description: "",
 	Flags: append([]cli.Flag{
 		&cli.StringFlag{
-			Name:  "sec",
-			Usage: "secret key to sign the patch, as hex or nsec",
-		},
-		&cli.StringFlag{
-			Name:  "connect",
-			Usage: "sign event using NIP-46, expects a bunker://... URL",
-		},
-		&cli.BoolFlag{
-			Name:  "store-sec",
-			Usage: "if we should save the secret key to git config --local",
+			Name:    "sec",
+			Usage:   "secret key to sign the patch, as hex or nsec, or bunker:// URL, or a NIP-46-powered name@domain",
+			Aliases: []string{"connect"},
 		},
 		&cli.StringFlag{
 			Name:    "to",

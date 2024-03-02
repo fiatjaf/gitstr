@@ -22,16 +22,9 @@ var initRepo = &cli.Command{
 			Aliases: []string{"r"},
 		},
 		&cli.StringFlag{
-			Name:  "sec",
-			Usage: "secret key to sign the repository announcement",
-		},
-		&cli.StringFlag{
-			Name:  "connect",
-			Usage: "sign event using NIP-46, expects a bunker://... URL",
-		},
-		&cli.BoolFlag{
-			Name:  "store-sec",
-			Usage: "if we should save the secret key to git config --local",
+			Name:    "sec",
+			Usage:   "secret key to sign the repository announcement, as hex or nsec, or bunker:// URL, or a NIP-46-powered name@domain",
+			Aliases: []string{"connect"},
 		},
 		&cli.StringFlag{
 			Name:  "id",
@@ -136,7 +129,7 @@ var initRepo = &cli.Command{
 
 		bunker, sec, isEncrypted, err := gatherSecretKeyOrBunker(ctx, c)
 		if err != nil {
-			return fmt.Errorf("failed to get secret key: %w", err)
+			return fmt.Errorf("failed to get authentication data: %w", err)
 		}
 
 		if isEncrypted {

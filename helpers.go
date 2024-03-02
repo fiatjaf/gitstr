@@ -13,6 +13,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip05"
 	"github.com/nbd-wtf/go-nostr/nip19"
 	"github.com/nbd-wtf/go-nostr/nip46"
 	"github.com/nbd-wtf/go-nostr/nip49"
@@ -36,28 +37,38 @@ func gatherSecretKeyOrBunker(ctx context.Context, c *cli.Command) (
 	encrypted bool,
 	err error,
 ) {
-	bunkerURL := c.String("connect")
-	if bunkerURL == "" {
-		bunkerURL, _ = git("config", "--local", "str.bunker")
-	}
-	if bunkerURL != "" {
-		logf(color.YellowString("connecting to bunker...\n"))
-		clientKey := nostr.GeneratePrivateKey()
-		bunker, err := nip46.ConnectBunker(ctx, clientKey, bunkerURL, nil)
-		if bunker != nil {
-			git("config", "--local", "str.bunker", bunkerURL)
-		}
-		return bunker, "", false, err
-	}
-
-	sec := c.String("sec")
-	if sec == "" && !c.IsSet("sec") {
-		sec, _ = git("config", "--local", "str.secretkey")
-	}
-
 	askToStore := false
-	if sec == "" {
-		sec, _ = ask("input secret key (hex, nsec or ncryptsec): ", "", func(answer string) bool {
+	storeWithoutAsking := false
+	secOrBunker := c.String("sec")
+
+	defer func() {
+		if err == nil {
+			if storeWithoutAsking || (askToStore && confirm("store the secret key on git config? ")) {
+				git("config", "--local", "str.auth", secOrBunker)
+			}
+		}
+	}()
+
+	clientKey, _ := git("config", "str.nip46clientsecret")
+	if clientKey == "" {
+		clientKey = nostr.GeneratePrivateKey()
+		git("config", "--global", "str.nip46clientsecret", clientKey)
+	}
+
+	if secOrBunker == "" {
+		secOrBunker, _ = git("config", "--local", "str.secretkey") // TODO: remove this after a while
+	}
+	if secOrBunker == "" {
+		secOrBunker, _ = git("config", "--local", "str.bunker") // TODO: remove this after a while
+	}
+	if secOrBunker == "" {
+		secOrBunker, _ = git("config", "--local", "str.auth")
+	} else {
+		git("config", "--local", "str.auth", secOrBunker) // TODO: remove this after a while
+	}
+
+	if secOrBunker == "" {
+		secOrBunker, _ = ask("input secret key (hex, nsec, ncryptsec or bunker): ", "", func(answer string) bool {
 			switch {
 			case nostr.IsValid32ByteHex(answer):
 				askToStore = true
@@ -66,39 +77,45 @@ func gatherSecretKeyOrBunker(ctx context.Context, c *cli.Command) (
 				askToStore = true
 				return false
 			case strings.HasPrefix(answer, "ncryptsec1"):
-				// will always store encrypted keys
+				storeWithoutAsking = true
+				return false
+			case nip46.IsValidBunkerURL(answer):
+				storeWithoutAsking = true
+				return false
+			case nip05.IsValidIdentifier(answer):
+				storeWithoutAsking = true
 				return false
 			default:
 				return true
 			}
 		})
-		if sec == "" {
-			return nil, "", false, fmt.Errorf("couldn't gather secret key")
-		}
 	}
 
-	if strings.HasPrefix(sec, "ncryptsec1") {
-		git("config", "--local", "str.secretkey", sec)
-		return nil, sec, true, nil
-	} else {
-		if strings.HasPrefix(sec, "nsec1") {
-			_, hex, err := nip19.Decode(sec)
-			if err != nil {
-				return nil, "", false, fmt.Errorf("invalid nsec: %w", err)
-			}
-			sec = hex.(string)
+	if _, _, err := nip05.ParseIdentifier(secOrBunker); err == nil || nip46.IsValidBunkerURL(secOrBunker) {
+		clientPublicKey, _ := nostr.GetPublicKey(clientKey)
+		logf(color.YellowString("connecting to bunker as %s...\n"), clientPublicKey)
+		bunker, err := nip46.ConnectBunker(ctx, clientKey, secOrBunker, nil, func(s string) {
+			fmt.Fprintf(os.Stderr, color.CyanString("[nip46]: open the following URL: %s"), s)
+		})
+		if bunker != nil {
+			git("config", "--local", "str.auth", secOrBunker)
 		}
-		if ok := nostr.IsValid32ByteHex(sec); !ok {
-			return nil, "", false, fmt.Errorf("invalid secret key")
-		}
+		return bunker, "", false, err
 	}
 
-	if (askToStore && confirm("store the secret key on git config? ")) ||
-		c.Bool("store-sec") {
-		git("config", "--local", "str.secretkey", sec)
+	if strings.HasPrefix(secOrBunker, "ncryptsec1") {
+		return nil, secOrBunker, true, nil
+	} else if strings.HasPrefix(secOrBunker, "nsec1") {
+		_, hex, err := nip19.Decode(secOrBunker)
+		if err != nil {
+			return nil, "", false, fmt.Errorf("invalid nsec: %w", err)
+		}
+		return nil, hex.(string), false, nil
+	} else if ok := nostr.IsValid32ByteHex(secOrBunker); !ok {
+		return nil, "", false, fmt.Errorf("invalid secret key")
 	}
 
-	return nil, sec, false, nil
+	return nil, "", false, fmt.Errorf("couldn't gather secret key")
 }
 
 func getPatchRelays() []string {
