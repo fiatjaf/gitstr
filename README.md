@@ -6,6 +6,34 @@ Send and receive git patches over Nostr, using [NIP-34](https://github.com/nostr
 
 Do `go install github.com/fiatjaf/gitstr/cmd/git-str@latest` if you have Go or [download a binary](https://github.com/fiatjaf/gitstr/releases).
 
+### Confirm the Installation Location
+
+```bash
+ls $HOME/go/bin
+```
+
+If git-str is in $HOME/go/bin, but it’s still not found globally, add $HOME/go/bin to your PATH:
+
+```bash
+echo 'export PATH=$PATH:$HOME/go/bin' >> ~/.bashrc
+```
+
+```bash
+source ~/.bashrc
+```
+
+Now try again:
+
+```bash
+git-str --help
+```
+
+or
+
+```bash
+git str
+```
+
 ## How to receive patches
 
 If you want to receive patches in our repo, call `git str init -r <relay> [-r <relay>...]`, this will ask you a bunch of questions (you can also answer them using flags and not be asked, see `git str init --help`) and then it will announce your repository to the relays specified with `-r`.
